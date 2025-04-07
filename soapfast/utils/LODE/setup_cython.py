@@ -8,8 +8,8 @@ ext_modules = [
         "fourier_integrals",
         ["fourier_integrals.pyx"],
         libraries=["m"],
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp'],
+        extra_compile_args=['-Xpreprocessor', '-fopenmp', '-I/usr/local/opt/libomp/include'],
+        extra_link_args=['-L/usr/local/opt/libomp/lib', '-lomp'],
     )
 ]
 
