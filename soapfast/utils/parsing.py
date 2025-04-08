@@ -62,7 +62,22 @@ def set_variable_values_learn(args):
 
     # Read in tensor data for training the model
     if (not args.spherical):
-        if args.center != '':
+        if args.property == 'forces' and type(ftrs[0].get_calculator()) == SinglePointCalculator:
+            tens = []
+            for fr in ftrs:
+                calc = fr.calc
+                assert type(calc) == SinglePointCalculator
+                forces = calc.get_forces()
+                forces = forces[np.where(fr.numbers==atomic_numbers[args.center])[0]]
+                print('FORCES DOWNSAMPLE:',np.where(fr.numbers==atomic_numbers[args.center])[0])
+                if args.center != '':
+                    nat = [1 for i in range(len(forces))]
+                forces = forces.reshape(-1)
+                forces = ' '.join(forces.astype(str))
+                print('FORCES TYPE:',type(forces))
+                print('FORCES:',forces)
+                tens.append(forces)
+        elif args.center != '':
             if int_rank == 0:
                 tens = [ str(frame_prop) for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]] ]
             else:
@@ -91,7 +106,23 @@ def set_variable_values_learn(args):
             print("Either regular kernels or sparsification kernels must be specified (not both)!")
             sys.exit(0)
     else:
-        if args.center != '':
+        if args.property == 'forces' and type(ftrs[0].get_calculator()) == SinglePointCalculator:
+            tens = []
+            for fr in ftrs:
+                calc = fr.calc
+                assert type(calc) == SinglePointCalculator
+                forces = calc.get_forces()
+                forces = forces[np.where(fr.numbers==atomic_numbers[args.center])[0]]
+                print('FORCES DOWNSAMPLE:',np.where(fr.numbers==atomic_numbers[args.center])[0])
+                if args.center != '':
+                    nat = [1 for i in range(len(forces))]
+                forces = forces.reshape(-1)
+                forces = ' '.join(forces.astype(str))
+                print('FORCES TYPE:',type(forces))
+                print('FORCES:',forces)
+                tens.append(forces)
+
+        elif args.center != '':
             if int_rank == 0:
                 tens = [ str(frame_prop) for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]] ]
             else:
