@@ -65,6 +65,12 @@ def do_sagpr_spherical(kernel,tens,reg,rank_str='',nat=[],fractrain=1.0,rdm=0,se
     # Get a list of members of the training and testing sets
     ndata = len(tens)
     [ns,nt,ntmax,trrange,terange] = shuffle_data(ndata,sel,rdm,fractrain)
+    print('ns:',ns)
+    print('nt:',nt)
+    print('ntmax:',ntmax)
+    print('trrange:',trrange)
+    print('terange:',terange)
+
    
     # If we are doing sparsification, set the training range equal to the entire transformed training set
     if (reg_matr != []):
@@ -74,8 +80,10 @@ def do_sagpr_spherical(kernel,tens,reg,rank_str='',nat=[],fractrain=1.0,rdm=0,se
 
     # Partition properties and kernel for training and testing
     [vtrain,vtest,ktr,kte,nattrain,nattest] = partition_kernels_properties_spherical(tens,kernel,trrange,terange,nat)
-    vtrain_part = vtrain.reshape(np.size(vtrain))
-    vtest_part  = vtest.reshape(np.size(vtest))
+    print("vtrain.shape: ",np.shape(vtrain))
+    print("vtest.shape: ",np.shape(vtest))
+    vtrain_part = vtrain# .reshape(np.size(vtrain))
+    vtest_part  = vtest# .reshape(np.size(vtest))
 
     # Subtract the mean if L=0
     meantrain = 0.0
@@ -87,6 +95,10 @@ def do_sagpr_spherical(kernel,tens,reg,rank_str='',nat=[],fractrain=1.0,rdm=0,se
 
     # Build training kernels
     [ktrain,ktrainpred] = build_training_kernel(len(ktr),degen,ktr,reg,reg_matr)
+    print("ktrain.shape: ",np.shape(ktrain))
+    print("ktrain",ktrain)
+    print("vtrain_part.shape: ",np.shape(vtrain_part))
+    print("vtrain_part",vtrain_part)
 
     # Invert training kernels
     invktrvec = get_weights(ktrain,vtrain_part,mode,jitter)
@@ -150,11 +162,19 @@ def do_sagpr_spherical(kernel,tens,reg,rank_str='',nat=[],fractrain=1.0,rdm=0,se
 ###############################################################################################################################
 
 def get_spherical_tensor_components(tens,rank,threshold):
+    print("Getting spherical tensor components...")
+    print("Rank: ",rank)
+    print("Tens.shape: ",np.shape(tens))
+    print("Tens: ",tens)
+
 
     # Get spherical components from input tensor
     [all_CS,keep_cols,all_sym] = get_cartesian_to_spherical(rank)
     CS = all_CS[-1]
     tensor = [np.array(tens[i].split()).astype(float) for i in range(len(tens))]
+    tensor = [t.reshape(-1,3) for t in tensor]
+    print("Tensor: ",tensor)
+    print("Keep_cols: ",keep_cols)
     [spherical_components,keep_list,CR,degen,lin_dep_list,sym_list] = get_spherical_components(tensor,CS,threshold,keep_cols,all_sym)
 
     return [spherical_components,degen,CR,CS,keep_cols,keep_list,lin_dep_list,sym_list]

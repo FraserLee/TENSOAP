@@ -61,13 +61,32 @@ def set_variable_values_learn(args):
     nat = [ftrs[i].get_global_number_of_atoms() for i in range(len(ftrs))]
 
     # Read in tensor data for training the model
+    print('ftrs[0].arrays', ftrs[0].arrays)
+    print('ftrs[0].info', ftrs[0].info)
+    print('ftrs[0]', ftrs[0])
     if (not args.spherical):
         if args.center != '':
             if int_rank == 0:
                 tens = [ str(frame_prop) for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]] ]
+                nat = [1 for i in range(len(tens))]
             else:
-                tens = [' '.join(frame_prop.astype(str))  for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]]]
-            nat = [1 for i in range(len(tens))]
+                # tens = [' '.join(frame_prop.astype(str))  for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]]]
+                tens = [ ]
+                nat = [1 for i in range(len(ftrs))]
+                for fr in ftrs:
+                    if args.property in fr.arrays:
+                        tens.append(' '.join(fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]].astype(str)))
+                    elif fr.calc is not None and args.property in fr.calc.results:
+                        print('fr.calc.results', fr.calc.results)
+                        print('args.property', args.property)
+                        print('fr.calc.results[args.property]', fr.calc.results[args.property])
+                        print('fr.numbers', fr.numbers)
+                        # tens.append(' '.join(fr.calc.results[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]].astype(str)))
+                        interim = fr.calc.results[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]]
+                        # tens.append(' '.join(fr.calc.results[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]].astype(str).flatten()))
+                        tens.append(' '.join(interim.astype(str).flatten()))
+                        nat = [1 for i in range(len(interim))]
+
         elif args.peratom:
             if int_rank == 0:
                 tens = [str(ftrs[i].info[args.property]/nat[i]) for i in range(len(ftrs))]
