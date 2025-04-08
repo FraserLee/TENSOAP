@@ -65,6 +65,7 @@ def get_spherical_components(tens,CS,threshold,keep_cols,all_sym):
     # Extract the complex spherical components of the tensors, and keep only those that are nonzero (within some threshold)
 
 
+    print('KEEP_COLS = ',keep_cols)
     if (len(keep_cols[-1]) > 0):
         degen = [1 + 2*keep_cols[-1][i][-1] for i in range(len(keep_cols[-1]))]
     else:
@@ -74,10 +75,12 @@ def get_spherical_components(tens,CS,threshold,keep_cols,all_sym):
 
     # Get CR matrix
     CR = complex_to_real_transformation(degen)
+    print('DEGEN = ',degen)
 
     all_tens_sphr = [ [] for i in range(len(degen))]
     for i in range(len(tens)):
         # Split into spherical components
+        print("tens[i].shape = ",tens[i].shape)
         tens_sphr = np.split(np.dot(np.array(tens[i]).astype(float),CS),cumulative_degen)
         for j in range(len(degen)):
             vtensor_out = []
@@ -175,6 +178,11 @@ def complex_to_real_transformation(sizes):
 ###############################################################################################################################
 
 def partition_kernels_properties_spherical(data,kernel,trrange,terange,nat):
+    print("Partitioning kernels and properties for training and testing")
+    print("trrange = ",trrange)
+    print("terange = ",terange)
+    print("nat = ",nat)
+    print('data = ',data)
     # Partition kernels and properties for training and testing
 
     vtrain    = np.array([data[i] for i in trrange])

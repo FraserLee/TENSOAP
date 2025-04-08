@@ -15,8 +15,12 @@ def main():
     # Parse input arguments
     args = parsing.add_command_line_arguments_learn("SA-GPR")
     [reg,fractrain,tens,kernels,sel,rdm,rank,nat,peratom,prediction,weights,sparsify,mode,threshold,jitter] = parsing.set_variable_values_learn(args)
+    print("TENSSSS", tens)
+    print("TENS TYPE", type(tens))
+
     
     if (args.spherical == False):
+        print("FRASER AAAAAAAAA")
     
         # Do full Cartesian regression, without environmental sparsification
         if (sparsify == None):
@@ -30,6 +34,7 @@ def main():
                 kernel.append(kr)
             
             print("...Kernels loaded.")
+            print("GETTING SPHERICAL COMPONENTS...")
     
             # Get spherical components
             [spherical_tensor,degen,CR,CS,keep_cols,keep_list,lin_dep_list,sym_list] = sagpr_utils.get_spherical_tensor_components(tens,rank,threshold)
@@ -45,6 +50,10 @@ def main():
                 str_rank = ''.join(map(str,keep_list[l][1:]))
                 if (str_rank == ''):
                     str_rank = ''.join(map(str,keep_list[l]))
+
+                print("CALL SITE C")
+                print("len(nat)",len(nat),"nat",nat)
+
                 [ov, tv, na] = sagpr_utils.do_sagpr_spherical(kernel[l],spherical_tensor[l],reg[l],rank_str=str_rank,nat=nat,fractrain=fractrain,rdm=rdm,sel=sel,peratom=peratom,prediction=prediction,get_meantrain=True,mode=mode,wfile=weights,fnames=[args.features,kernels[l]],jitter=jitter[l])
                 outvec.append(ov)
                 tstvec.append(tv)

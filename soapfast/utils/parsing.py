@@ -6,6 +6,7 @@ import ase
 from packaging import version
 from ase.io import read
 from ase.data import atomic_numbers,chemical_symbols
+from ase.calculators.singlepoint import SinglePointCalculator
 
 # ASE 3.20 stopped interpreting vectors with 9 values as 3x3 tensors,
 # so we need to be able to distinguish them
@@ -60,92 +61,147 @@ def set_variable_values_learn(args):
     sparsify = args.sparsify
     nat = [ftrs[i].get_global_number_of_atoms() for i in range(len(ftrs))]
 
+    print('ORIGINAL SITE FOR len(NAT):',len(nat),'nat:',nat)
+
     # Read in tensor data for training the model
-    if (not args.spherical):
-        if args.property == 'forces' and type(ftrs[0].get_calculator()) == SinglePointCalculator:
-            tens = []
-            for fr in ftrs:
-                calc = fr.calc
-                assert type(calc) == SinglePointCalculator
+    print('ftrs:',ftrs)
+    print('ftrs[0]',ftrs[0])
+    print('ftrs[0].info:',ftrs[0].info)
+    print('args.property:',args.property)
+    print('ftrs[0].get_calculator():',ftrs[0].get_calculator())
+    print('ftrs[0].arrays:',ftrs[0].arrays)
+    print('OOO')
+
+
+    def get_property(a: ase.Atoms, prop: str):
+        if prop in a.arrays:
+            return a.arrays[prop]
+        elif prop in a.info:
+            return a.info[prop]
+        elif type(a.get_calculator()) == SinglePointCalculator:
+            calc = a.get_calculator()
+            assert type(calc) == SinglePointCalculator
+            if prop == 'forces':
                 forces = calc.get_forces()
-                forces = forces[np.where(fr.numbers==atomic_numbers[args.center])[0]]
-                print('FORCES DOWNSAMPLE:',np.where(fr.numbers==atomic_numbers[args.center])[0])
-                if args.center != '':
-                    nat = [1 for i in range(len(forces))]
-                forces = forces.reshape(-1)
-                forces = ' '.join(forces.astype(str))
                 print('FORCES TYPE:',type(forces))
                 print('FORCES:',forces)
-                tens.append(forces)
-        elif args.center != '':
+                return forces
+
+        raise ValueError(f"Property '{prop}' not found in atoms object.")
+
+
+
+    if (not args.spherical):
+        # if args.property == 'forces' and type(ftrs[0].get_calculator()) == SinglePointCalculator:
+        #     tens = []
+        #     for fr in ftrs:
+        #         calc = fr.calc
+        #         assert type(calc) == SinglePointCalculator
+        #         forces = calc.get_forces()
+        #         forces = forces[np.where(fr.numbers==atomic_numbers[args.center])[0]]
+        #         print('FORCES DOWNSAMPLE:',np.where(fr.numbers==atomic_numbers[args.center])[0])
+        #         if args.center != '':
+        #             nat = [1 for i in range(len(forces))]
+        #         forces = forces.reshape(-1)
+        #         forces = ' '.join(forces.astype(str))
+        #         print('FORCES TYPE:',type(forces))
+        #         print('FORCES:',forces)
+        #         tens.append(forces)
+        if args.center != '':
+            print('BBB')
             if int_rank == 0:
-                tens = [ str(frame_prop) for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]] ]
+                print('CCC')
+                tens = [str(frame_prop) for fr in ftrs for frame_prop in get_property(fr, args.property)[np.where(fr.numbers==atomic_numbers[args.center])[0]]]
             else:
-                tens = [' '.join(frame_prop.astype(str))  for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]]]
+                print('DDD')
+                tens = [' '.join(frame_prop.astype(str) for fr in ftrs for frame_prop in get_property(fr, args.property)[np.where(fr.numbers==atomic_numbers[args.center])[0]])]
             nat = [1 for i in range(len(tens))]
         elif args.peratom:
+            print('EEE')
             if int_rank == 0:
-                tens = [str(ftrs[i].info[args.property]/nat[i]) for i in range(len(ftrs))]
+                print('FFF')
+                tens = [str(get_property(ftrs[i], args.property)/nat[i]) for i in range(len(ftrs))]
             elif ASE_LOWER_3_20 and int_rank == 2:
-                tens = [' '.join((np.concatenate(ftrs[i].info[args.property])/nat[i]).astype(str)) for i in range(len(ftrs))]
+                print('GGG')
+                tens = [' '.join(np.concatenate(get_property(ftrs[i], args.property))/nat[i]).astype(str) for i in range(len(ftrs))]
             else:
-                tens = [' '.join((np.array(ftrs[i].info[args.property])/nat[i]).astype(str)) for i in range(len(ftrs))]
+                print('HHH')
+                tens = [' '.join((np.array(get_property(ftrs[i], args.property))/nat[i]).astype(str)) for i in range(len(ftrs))]
         else:
+            print('III')
             if int_rank == 0:
+                print('JJJ')
                 tens = [str(ftrs[i].info[args.property]) for i in range(len(ftrs))]
             elif ASE_LOWER_3_20 and int_rank == 2:
-                tens = [' '.join(np.concatenate(ftrs[i].info[args.property]).astype(str)) for i in range(len(ftrs))]
+                print('KK')
+                tens = [' '.join(np.concatenate(get_property(ftrs[i], args.property)).astype(str)) for i in range(len(ftrs))]
             else:
-                tens = [' '.join(np.array(ftrs[i].info[args.property]).astype(str)) for i in range(len(ftrs))]
+                print('LLL')
+                tens = [' '.join(np.array(get_property(ftrs[i], args.property)).astype(str)) for i in range(len(ftrs))]
 
 
         if (kernels == None and sparsify == None):
+            print('MMM')
             print("Either regular kernels or sparsification kernels must be specified!")
             sys.exit(0)
         if (kernels != None and sparsify != None):
+            print('NNN')
             print("Either regular kernels or sparsification kernels must be specified (not both)!")
             sys.exit(0)
     else:
-        if args.property == 'forces' and type(ftrs[0].get_calculator()) == SinglePointCalculator:
-            tens = []
-            for fr in ftrs:
-                calc = fr.calc
-                assert type(calc) == SinglePointCalculator
-                forces = calc.get_forces()
-                forces = forces[np.where(fr.numbers==atomic_numbers[args.center])[0]]
-                print('FORCES DOWNSAMPLE:',np.where(fr.numbers==atomic_numbers[args.center])[0])
-                if args.center != '':
-                    nat = [1 for i in range(len(forces))]
-                forces = forces.reshape(-1)
-                forces = ' '.join(forces.astype(str))
-                print('FORCES TYPE:',type(forces))
-                print('FORCES:',forces)
-                tens.append(forces)
+        # if args.property == 'forces' and type(ftrs[0].get_calculator()) == SinglePointCalculator:
+        #     tens = []
+        #     for fr in ftrs:
+        #         calc = fr.calc
+        #         assert type(calc) == SinglePointCalculator
+        #         forces = calc.get_forces()
+        #         forces = forces[np.where(fr.numbers==atomic_numbers[args.center])[0]]
+        #         print('FORCES DOWNSAMPLE:',np.where(fr.numbers==atomic_numbers[args.center])[0])
+        #         if args.center != '':
+        #             nat = [1 for i in range(len(forces))]
+        #         forces = forces.reshape(-1)
+        #         forces = ' '.join(forces.astype(str))
+        #         print('FORCES TYPE:',type(forces))
+        #         print('FORCES:',forces)
+        #         tens.append(forces)
 
-        elif args.center != '':
+        if args.center != '':
+            print('PPP')
             if int_rank == 0:
-                tens = [ str(frame_prop) for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]] ]
+                print('QQQ')
+                tens = [str(frame_prop) for fr in ftrs for frame_prop in get_property(fr, args.property)[np.where(fr.numbers==atomic_numbers[args.center])[0]]]
             else:
-                tens = [' '.join(frame_prop.astype(str).reshape(2*int_rank + 1))  for fr in ftrs for frame_prop in fr.arrays[args.property][np.where(fr.numbers==atomic_numbers[args.center])[0]]]
+                print('RRR')
+                tens = [' '.join(frame_prop.astype(str).reshape(2*int_rank + 1)) for fr in ftrs for frame_prop in get_property(fr, args.property)[np.where(fr.numbers==atomic_numbers[args.center])[0]]]
             nat = [1 for i in range(len(tens))]
         elif args.peratom:
+            print('SSS')
             if int_rank == 0:
-                tens = [str(ftrs[i].info[args.property]/nat[i]) for i in range(len(ftrs))]
+                print('TTT')
+                tens = [str(get_property(ftrs[i], args.property)/nat[i]) for i in range(len(ftrs))]
             else:
-                tens = [' '.join((np.array(ftrs[i].info[args.property].reshape(2*int_rank + 1))/nat[i]).astype(str)) for i in range(len(ftrs))]
+                print('UUU')
+                tens = [' '.join((np.array(get_property(ftrs[i], args.property).reshape(2*int_rank + 1))/nat[i]).astype(str)) for i in range(len(ftrs))]
         else:
+            print('VVV')
             if int_rank == 0:
-                tens = [str(ftrs[i].info[args.property]) for i in range(len(ftrs))]
+                print('WWW')
+                tens = [str(get_property(ftrs[i], args.property)) for i in range(len(ftrs))]
             else:
-                tens = [' '.join((np.array(ftrs[i].info[args.property].reshape(2*int_rank + 1))).astype(str)) for i in range(len(ftrs))]
+                print('XXX')
+                tens = [' '.join((np.array(get_property(ftrs[i], args.property).reshape(2*int_rank + 1))).astype(str)) for i in range(len(ftrs))]
+
 
 
         if kernels != None:
+            print('YYY')
             kernels = kernels[0]
         if (kernels == None and sparsify == None):
+            print('ZZZ')
             print("Either regular kernels or sparsification kernels must be specified!")
             sys.exit(0)
         if (kernels != None and sparsify != None):
+            print('AAB')
             print("Either regular kernels or sparsification kernels must be specified (not both)!")
             sys.exit(0)
 
@@ -182,6 +238,7 @@ def set_variable_values_learn(args):
     if ((sparsify != None) and (jitter == None) and (args.mode=='solve')):
         print("NOTE: with environmental sparsification, a jitter term is recommended if the solve mode is used")
 
+    print('RETURNING TENS:',tens)
     return [reg,ftr,tens,kernels,sel,rdm,rank,nat,args.peratom,args.prediction,args.weights,sparsify,args.mode,args.threshold,jitter]
 ###############################################################################################################################
 def add_command_line_arguments_PS(parsetext):
