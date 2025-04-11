@@ -39,6 +39,7 @@ def main():
 
             outvec = []
             tstvec = []
+            print('DEGEN:', degen)
             for l in range(len(degen)):
                 # Do regression for each spherical tensor component
                 lval = keep_list[l][-1]
